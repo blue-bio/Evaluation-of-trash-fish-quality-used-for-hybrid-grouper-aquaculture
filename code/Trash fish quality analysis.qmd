@@ -1,0 +1,937 @@
+---
+title: "Trash fish quality analysis"
+format: html
+---
+
+#Preperation 
+##Load packages
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(car)
+library(glmmTMB)
+library(mgcv)
+library(mgcViz)
+library(multcomp)
+library(emmeans)
+library(DHARMa)
+library(powerjoin)
+library(paletteer)
+library(fishualize)
+library(vegan)
+library(ggsignif)
+library(ggpubr)
+library(reshape2)
+library("Hmisc")
+library(corrplot)
+
+set.seed(42)
+```
+
+##Load data
+```{r}
+quality_chem <- read_csv('../data/1.3-2024-1-1_Chem-Bio-indicators.csv', trim_ws = TRUE, na = c("", "na"))
+quality_sense <- read_csv('../data/1.3-2024-1-1_TF_sensory_scores.csv', trim_ws = TRUE, na = c("", "na"))
+quality_sp <- read_csv('../data/1.3-2024-1-1_TF_indicators_species.csv', trim_ws = TRUE, na = c("", "na"))
+
+quality_chem <- quality_chem |>  
+  dplyr::mutate(location = as.factor(location), 
+                replicate = as.factor(replicate), 
+                sample  = as.factor(sample))
+
+quality_sense <- quality_sense |>  
+  dplyr::mutate(location = as.factor(location), 
+                evaluator = as.factor(evaluator),
+                sample  = as.factor(sample),
+                Score = (Eye_Clarity+Mucous+Odor)/3)
+
+quality_sp <- quality_sp |>  
+  dplyr::mutate(location = as.factor(location)) |> 
+  dplyr::group_by(sample) |> 
+  dplyr::mutate(total_count = sum(Count), 
+                proportion = Count/total_count)
+``` 
+
+###Combine datasets 
+```{r}
+quality_sense_mean <- 
+  quality_sense |>  
+  dplyr::mutate(score = (Eye_Clarity+Mucous+Odor)/3) |>  
+  dplyr::group_by(sample, location) |>  
+  dplyr::summarise(score = mean(score), 
+                   eye = mean(Eye_Clarity), 
+                   mucous = mean(Mucous), 
+                   odor = mean(Odor)) 
+
+quality_comb <- power_full_join(quality_chem, quality_sense_mean, 
+                     by = "sample") |>  
+  dplyr::select(!location.y) |> 
+  dplyr::rename(location = location.x)
+
+quality_comb_mean <- quality_comb |> 
+  dplyr::select(!replicate) |> 
+  dplyr::group_by(sample, location) |>  
+  dplyr::summarise(across(everything(), mean, na.rm = TRUE)) 
+
+quality_Family <- 
+  quality_sp |>  
+  dplyr::group_by(Number, sample, location, Type, Family) |> 
+  dplyr::summarise(Proportion = sum(proportion))
+```
+
+#Species composition
+```{r}
+quality_sp |> 
+  dplyr::group_by(Genus) |> 
+  dplyr::summarise(sum(Count))
+
+#52 Genera including Unknown, for 51 total (48 if you exclude the prawn, squid and stingray)
+
+q_fam_order <- quality_Family |> 
+  dplyr::group_by(Family) |> 
+  dplyr::summarise(overP = sum(Proportion)/22) |> 
+  arrange(desc(overP)) |> 
+  dplyr::mutate(Index = 1:n(), Sum_Fam = ifelse(Index > 9, "Other", Family)) |> 
+    power_full_join(quality_Family, 
+                     by = "Family") |>  
+  dplyr::group_by(Number,location, Sum_Fam, Index) |> 
+  dplyr::summarise(Prop = sum(Proportion))
+ 
+#Bubble plot summarising families per sample 
+q_fam_order |> 
+  ggplot(aes(y = fct_reorder(Sum_Fam, Index, .desc = TRUE), x = Number, size = Prop, colour = location)) + 
+  geom_point() + 
+  theme_pubr() +
+  theme(panel.grid.major = element_line(color = "lightgrey",
+                                        size = 0.2)) +
+  scale_x_continuous(name = "Trash fish sample", 
+                     breaks = c(seq(from =1, to = 22, by =1)), 
+                     limits = c(1,22)) +
+  scale_y_discrete(name = "Trash Fish Family") +
+  scale_colour_paletteer_d(palette = "fishualize::Epinephelus_lanceolatus", 
+                           direction = 1, 
+                           name = "Location", 
+                           #guide = "none"
+                           ) + 
+  scale_size_continuous(name = "Proportion of sample")
+```
+
+
+#Sensory Assessment
+###Evaluators 
+####Eye Clarity
+```{r}
+quality_sense |>  
+  ggplot(aes(sample, Eye_Clarity)) +
+  geom_point(aes(colour = evaluator)) + 
+  scale_y_continuous(breaks=c(seq(0,10,1)), 
+                     limits = c(0,10))
+  
+glm_evaluators_eye <- glmmTMB(Eye_Clarity ~ evaluator, 
+                              data = quality_sense,
+                              family = gaussian())
+#checking fit
+simulateResiduals(glm_evaluators_eye, plot = TRUE)     #outlier detected,  acknowledge
+hist(simulateResiduals(glm_evaluators_eye))            #good
+testZeroInflation(glm_evaluators_eye)                  #good
+
+summary(glm_evaluators_eye)
+#no effect
+```
+
+####Mucous
+```{r}
+quality_sense |>  
+  ggplot(aes(x = evaluator, y = Mucous, colour = evaluator)) +
+  geom_boxplot()
+  
+glm_evaluators_mucous <- glmmTMB(Mucous ~ evaluator, 
+                              data = quality_sense,
+                              family = gaussian(), 
+                              dispformula = ~evaluator)
+
+#checking fit
+simulateResiduals(glm_evaluators_mucous, plot = TRUE)     #KS triggered but line mostly OK
+hist(simulateResiduals(glm_evaluators_mucous))            #good
+
+summary(glm_evaluators_mucous)
+#no effect
+```
+
+####Odor
+```{r}
+quality_sense |>  
+  ggplot(aes(sample, Odor)) +
+  geom_point(aes(colour = evaluator)) + 
+  scale_y_continuous(breaks=c(seq(0,10,1)), 
+                     limits = c(0,10)) + 
+  facet_wrap(~ location)
+  
+glm_evaluators_odor <- glmmTMB(log(Odor) ~ evaluator, 
+                              data = quality_sense,
+                              family = gaussian(), 
+                              dispformula = ~location)
+#checking fit
+simulateResiduals(glm_evaluators_odor, plot = TRUE)     #works with log and dis= ~location
+hist(simulateResiduals(glm_evaluators_odor))            #good
+
+summary(glm_evaluators_odor)
+#no effect
+```
+
+####Overall score
+```{r}
+##No significant differences in evaluators scoring for all variables
+#Odor has the most variation, followed by eye clarity. Mucous very consistent  
+glm_evaluators_score <- glmmTMB(Score ~ evaluator, 
+                              data = quality_sense,
+                              family = gaussian())
+
+simulateResiduals(glm_evaluators_score, plot = TRUE)     #good
+hist(simulateResiduals(glm_evaluators_score))            #good
+
+summary(glm_evaluators_score)
+#no effect of evaluators on overall score 
+```
+
+###Scores 
+####Plot together
+```{r}
+quality_sense_melt <- quality_sense |>  
+  reshape2::melt(ids.vars=c('sample', 'location', 'evaluator'), value.vars=c('Eye_Clarity', 'Mucous', 'Odor', 'Score')) |>  
+  dplyr::group_by(sample, location, variable) |> 
+  dplyr::summarise(value = mean(value))
+
+quality_sense_melt |> 
+ggplot(aes(x = variable, y = value, fill = location)) + 
+  geom_boxplot() +
+  theme_minimal() + 
+  scale_x_discrete(name = "", 
+                   labels = c("Eye Clarity", "Mucous", "Odor", "Overall Score")) + 
+  scale_y_continuous(limits = c(1, 10), 
+                     breaks = seq(1, 10, 1), 
+                     name = "Score") + 
+  scale_fill_paletteer_d(palette = "fishualize::Epinephelus_lanceolatus", 
+                           direction = 1, 
+                           name = "Location") +
+  theme(axis.line = element_line(colour = "black"), 
+        legend.text = element_text(colour = "black", 
+                                   size = 12), 
+        axis.text = element_text(colour = "black", 
+                                 size = 12), 
+        axis.title = element_text(size = 12),
+        panel.grid = element_blank(), 
+        axis.ticks = element_line(colour = "black"), 
+        panel.grid.major = element_line(colour = "#e5e5e5"), 
+        legend.position = "bottom")
+
+```
+
+###Location 
+####Eye clarity
+#####Ba Ria - Vung Tau
+```{r}
+quality_sense_only_BRVT <- quality_sense |> 
+  dplyr::filter(location == "Ba Ria - Vung Tau" ) 
+
+glm_eye_BRVT <- glmmTMB(Eye_Clarity ~ sample + (1|evaluator),
+                              data = quality_sense_only_BRVT,
+                              family = gaussian())
+
+simulateResiduals(glm_eye_BRVT, plot = TRUE)     #triggered but visually OK
+hist(simulateResiduals(glm_eye_BRVT))            #good
+testDispersion(simulateResiduals(glm_eye_BRVT))            #good
+
+summary(glm_eye_BRVT)
+cld((emmeans(glm_eye_BRVT,  ~ sample)), Letters = letters)
+ #Differences between farms exist
+```
+
+#####Kien Giang
+```{r}
+quality_sense_only_KG <- quality_sense |> 
+  dplyr::filter(location == "Kien Giang" ) 
+
+glm_eye_KG <- glmmTMB(Eye_Clarity ~ sample + (1|evaluator),
+                              data = quality_sense_only_KG,
+                              family = gaussian())
+
+simulateResiduals(glm_eye_KG, plot = TRUE)     #good
+hist(simulateResiduals(glm_eye_KG))            #good
+testZeroInflation(glm_eye_KG)                  #good
+
+summary(glm_eye_KG)
+cld((emmeans(glm_eye_KG,  ~ sample)), Letters = letters)
+#Differences between farms exist
+```
+
+#####Ca Mau
+```{r}
+quality_sense_only_CM <- quality_sense |> 
+  dplyr::filter(location == "Ca Mau" ) 
+
+glm_eye_CM <- glmmTMB(Eye_Clarity ~ sample + (1|evaluator),
+                              data = quality_sense_only_CM,
+                              family = gaussian())
+
+simulateResiduals(glm_eye_CM, plot = TRUE)     #good
+hist(simulateResiduals(glm_eye_CM))            #good
+testZeroInflation(glm_eye_CM)                  #good
+
+summary(glm_eye_CM)
+cld((emmeans(glm_eye_CM,  ~ sample)), Letters = letters)
+#Differences between farms exist 
+```
+
+#####Between regions
+```{r}
+quality_sense |> 
+ggplot(aes(x = location, y = Eye_Clarity, fill = location)) + 
+  geom_boxplot()
+
+glm_eye_locations <- glmmTMB(Eye_Clarity ~ location + (1|evaluator),
+                              data = quality_sense,
+                              family = gaussian())
+
+simulateResiduals(glm_eye_locations, plot = TRUE)     #good - but outlier detected
+hist(simulateResiduals(glm_eye_locations))            #good
+testDispersion(simulateResiduals(glm_eye_locations))            #good
+
+summary(glm_eye_locations)
+cld((emmeans(glm_eye_locations,  ~ location, type = "response")), Letters = letters)
+ # location          response    SE  df lower.CL upper.CL .group
+# Ba Ria - Vung Tau   5.33 0.217 Inf      4.90      5.75  a    
+#  Kien Giang          5.98 0.204 Inf      5.58      6.38  ab   
+#  Ca Mau              6.70 0.274 Inf      6.16      7.24   b
+```
+
+####Mucous
+#####Ba Ria - Vung Tau
+```{r}
+quality_sense_only_BRVT <- quality_sense |> 
+  dplyr::filter(location == "Ba Ria - Vung Tau" ) 
+
+glm_mucous_BRVT <- glmmTMB(Mucous ~ sample + (1|evaluator),
+                              data = quality_sense_only_BRVT,
+                              family = gaussian())
+
+simulateResiduals(glm_mucous_BRVT, plot = TRUE)     #good
+hist(simulateResiduals(glm_mucous_BRVT))            #good
+testDispersion(simulateResiduals(glm_mucous_BRVT))            #good
+
+cld((emmeans(glm_mucous_BRVT,  ~ sample)), Letters = letters)
+#Differences between farms exist
+```
+
+#####Kien Giang
+```{r}
+quality_sense_only_KG <- quality_sense |> 
+  dplyr::filter(location == "Kien Giang" ) 
+
+glm_mucous_KG <- glmmTMB(Mucous ~ sample + (1|evaluator),
+                              data = quality_sense_only_KG,
+                              family = gaussian())
+
+simulateResiduals(glm_mucous_KG, plot = TRUE)     #good
+hist(simulateResiduals(glm_mucous_KG))            #good
+testDispersion(simulateResiduals(glm_mucous_KG))            #good
+
+cld((emmeans(glm_mucous_KG,  ~ sample)), Letters = letters)
+#Differences between farms exist
+```
+
+#####Ca Mau
+```{r}
+quality_sense_only_CM <- quality_sense |> 
+  dplyr::filter(location == "Ca Mau" ) 
+
+glm_mucous_CM <- glmmTMB(Mucous ~ sample + (1|evaluator),
+                              data = quality_sense_only_CM,
+                              family = gaussian())
+
+simulateResiduals(glm_mucous_CM, plot = TRUE)     #good
+hist(simulateResiduals(glm_mucous_CM))            #good
+testDispersion(simulateResiduals(glm_mucous_CM))            #good
+
+cld((emmeans(glm_mucous_CM,  ~ sample)), Letters = letters)
+#No difference between farms
+```
+
+#####Between regions
+```{r}
+quality_sense |> 
+ggplot(aes(x = location, y = Mucous, fill = location)) + 
+  geom_boxplot()
+
+glm_mucous_locations <- glmmTMB(Mucous ~ location + (1|evaluator),
+                              data = quality_sense,
+                              family = gaussian())
+
+simulateResiduals(glm_mucous_locations, plot = TRUE)     #good
+hist(simulateResiduals(glm_mucous_locations))            #good
+testDispersion(simulateResiduals(glm_mucous_locations))  #good
+
+summary(glm_mucous_locations)
+cld((emmeans(glm_mucous_locations,  ~ location, type = "response")), Letters = letters)
+ # location          emmean     SE  df asymp.LCL asymp.UCL .group
+ # Ba Ria - Vung Tau   8.40 0.0771 Inf      8.25      8.55  a    
+ # Kien Giang          8.79 0.0736 Inf      8.64      8.93   b   
+ # Ca Mau              9.18 0.0935 Inf      9.00      9.36    c  
+```
+
+####Odor
+#####Ba Ria - Vung Tau
+```{r}
+quality_sense_only_BRVT <- quality_sense |> 
+  dplyr::filter(location == "Ba Ria - Vung Tau" ) 
+
+glm_modor_BRVT <- glmmTMB(Odor ~ sample + (1|evaluator),
+                              data = quality_sense_only_BRVT,
+                              family = gaussian())
+
+simulateResiduals(glm_modor_BRVT, plot = TRUE)     #good
+hist(simulateResiduals(glm_modor_BRVT))            #good
+testDispersion(simulateResiduals(glm_modor_BRVT))            #good
+
+cld((emmeans(glm_modor_BRVT,  ~ sample)), Letters = letters)
+#Differences between farms exist
+```
+
+#####Kien Giang
+```{r}
+quality_sense_only_KG <- quality_sense |> 
+  dplyr::filter(location == "Kien Giang" ) 
+
+glm_odor_KG <- glmmTMB(Odor ~ sample + (1|evaluator),
+                              data = quality_sense_only_KG,
+                              family = gaussian())
+
+simulateResiduals(glm_odor_KG, plot = TRUE)     #good
+hist(simulateResiduals(glm_odor_KG))            #good, outlier
+testDispersion(simulateResiduals(glm_odor_KG))            #good
+
+cld((emmeans(glm_odor_KG,  ~ sample)), Letters = letters)
+#Differences between farms exist
+```
+
+#####Ca Mau
+```{r}
+quality_sense_only_CM <- quality_sense |> 
+  dplyr::filter(location == "Ca Mau" ) 
+
+
+glm_odor_CM <- glmmTMB(Odor ~ sample + (1|evaluator),
+                              data = quality_sense_only_CM,
+                              family = gaussian())
+
+simulateResiduals(glm_odor_CM, plot = TRUE)     #good
+hist(simulateResiduals(glm_odor_CM))            #good
+testZeroInflation(glm_odor_CM)                  #good
+
+cld((emmeans(glm_odor_CM,  ~ sample)), Letters = letters)
+#No difference between farms
+```
+
+#####Between regions
+```{r}
+quality_sense |> 
+ggplot(aes(x = location, y = log(Odor), fill = location)) + 
+  #geom_boxplot() + 
+  geom_point(aes(colour = evaluator), 
+             position = "jitter")
+
+glm_odor_locations <- glmmTMB(log(Odor) ~ location + (1|evaluator),
+                              data = quality_sense,
+                              family = gaussian(), 
+                              dispformula = ~location)
+
+simulateResiduals(glm_odor_locations, plot = TRUE)     #uneven dispersion, need ~location and log
+plotResiduals(glm_odor_locations, quality_sense$evaluator, xlab = "evaluator", main=NULL)#good
+plotResiduals(glm_odor_locations, quality_sense$location, xlab = "location", main=NULL)#Kein Giang triggers, probably due to weird distribution. rest are OK so good to proceed
+hist(simulateResiduals(glm_odor_locations))            #good
+testDispersion(simulateResiduals(glm_odor_locations))  #good
+
+summary(glm_odor_locations)
+cld((emmeans(glm_odor_locations,  ~ location, type = "response")), Letters = letters)
+ # location          emmean     SE  df asymp.LCL asymp.UCL .group
+ # Ba Ria - Vung Tau   8.40 0.0771 Inf      8.25      8.55  a    
+ # Kien Giang          8.79 0.0736 Inf      8.64      8.93   b   
+ # Ca Mau              9.18 0.0935 Inf      9.00      9.36    c  
+```
+
+####Overall
+#####Ba Ria - Vung Tau
+```{r}
+quality_sense_BRVT <- quality_sense |> 
+  dplyr::filter(location == "Ba Ria - Vung Tau" ) 
+
+glm_score_BRVT <- glmmTMB(Score ~ sample + (1|evaluator),
+                              data = quality_sense_BRVT,
+                              family = gaussian())
+
+simulateResiduals(glm_score_BRVT, plot = TRUE)     #good
+hist(simulateResiduals(glm_score_BRVT))            #good
+testDispersion(simulateResiduals(glm_score_BRVT))            #good
+testZeroInflation(glm_score_BRVT)                  #good
+
+summary(glm_score_BRVT)
+pairs(emmeans(glm_score_BRVT,  ~ sample)) 
+cld((emmeans(glm_score_BRVT,  ~ sample)), Letters = letters)
+#Differences between farms exist 
+```
+
+#####Kien Giang
+```{r}
+quality_sense_KG <- quality_sense |> 
+  dplyr::filter(location == "Kien Giang" ) 
+
+glm_score_KG <- glmmTMB(Score ~ sample + (1|evaluator),
+                              data = quality_sense_KG,
+                              family = gaussian())
+
+simulateResiduals(glm_score_KG, plot = TRUE)     #good
+hist(simulateResiduals(glm_score_KG))            #good
+testZeroInflation(glm_score_KG)                  #good
+
+summary(glm_score_KG)
+pairs(emmeans(glm_score_KG,  ~ sample)) 
+cld((emmeans(glm_score_KG,  ~ sample)), Letters = letters)
+#Differences between farms exist 
+```
+
+#####Ca Mau
+```{r}
+quality_sense_CM <- quality_sense |> 
+  dplyr::filter(location == "Ca Mau" ) 
+
+
+glm_score_CM <- glmmTMB(Score ~ sample + (1|evaluator),
+                              data = quality_sense_CM,
+                              family = gaussian())
+
+simulateResiduals(glm_score_CM, plot = TRUE)     #good
+hist(simulateResiduals(glm_score_CM))            #good
+testZeroInflation(glm_score_CM)                  #good
+
+summary(glm_score_CM)
+pairs(emmeans(glm_score_CM,  ~ sample)) 
+cld((emmeans(glm_score_CM,  ~ sample)), Letters = letters)
+#No difference between farms
+```
+
+#####Between regions
+```{r}
+quailty_sense_box <- quality_sense |> 
+ggplot(aes(x = location, y = Score, fill = location)) + 
+  geom_boxplot() +
+  theme_minimal() + 
+  scale_x_discrete(name = "") + 
+  scale_y_continuous(limits = c(0, 10), 
+                     breaks = seq(1, 10, 1)) + 
+  scale_fill_paletteer_d(palette = "fishualize::Epinephelus_lanceolatus", 
+                           direction = 1, 
+                           name = "Location", 
+                         guide = "none") +
+  theme(axis.line = element_line(colour = "black"), 
+        legend.text = element_text(colour = "black"), 
+        axis.text = element_text(colour = "black"), 
+        panel.grid = element_blank(), 
+        axis.ticks = element_line(colour = "black")) + 
+  geom_signif(comparisons = list(c("Ca Mau", "Kien Giang")), 
+              annotations = c("NS")) + 
+  annotate("text", x = 1, y = 9.5, label = "***") 
+
+
+
+glm_score_locations <- glmmTMB(log(Score) ~ location + (1|evaluator),
+                              data = quality_sense,
+                              family = gaussian(), 
+                              dispformula = ~location)
+
+simulateResiduals(glm_score_locations, plot = TRUE)     #good - need log and ~ location to account for difference variance
+hist(simulateResiduals(glm_score_locations))            #good
+testDispersion(simulateResiduals(glm_score_locations))            #good
+testZeroInflation(glm_score_locations)                  #good
+
+summary(glm_score_locations)
+cld((emmeans(glm_score_locations,  ~ location, type = "response")), Letters = letters)
+ # location          response    SE  df lower.CL upper.CL .group
+ # Ba Ria - Vung Tau     5.62 0.253 103     5.14     6.14  a    
+ # Ca Mau                6.68 0.128 103     6.43     6.94   b   
+ # Kien Giang            6.75 0.217 103     6.33     7.19   b 
+```
+
+#Chemical and Biological indicators
+###Correlation matrix
+```{r}
+##bichem with each other
+quality_comb_matrix <- 
+  quality_comb |>  
+  dplyr::group_by(sample) |> 
+  dplyr::summarise(across(pH:score, mean, na.rm = TRUE)) |> 
+  dplyr::select(pH:score)
+
+res2 <- rcorr(as.matrix(quality_comb_matrix), type = c("spearman"))
+
+res <- cor(quality_comb_matrix, use = "complete.obs", method = "spearman")
+corrplot(res, type = "upper", order = "original", method = "number", 
+         tl.col = "black")
+
+testR <- cor.mtest(res, conf.level = 0.95)
+corrplot(res, type = "upper", order = "original", method = "color", diag = FALSE, 
+         tl.col = "black", tl.srt = 45,
+         p.mat = testR$p, sig.level=c(0.001, 0.01, 0.05), pch.cex = 0.9,
+         insig = "label_sig")
+```
+
+###pH
+```{r}
+glm_location_TVB_N <- glmmTMB(TVB_N ~ location + (1|sample), 
+                           family = Gamma(link = "log"), 
+                           data = quality_comb)
+
+#checking fit
+simulateResiduals(glm_location_TVB_N, plot = TRUE)     #qq good, Gamma makes fit better,
+plotResiduals(glm_location_TVB_N, quality_comb$location, xlab = "location", main=NULL)
+
+hist(simulateResiduals(glm_location_TVB_N))            #good
+testDispersion(simulateResiduals(glm_location_TVB_N))
+
+summary(glm_location_TVB_N) 
+#yes influence of everything
+
+cld((emmeans(glm_location_TVB_N,  ~ location, type = "response")), Letters = letters)
+```
+
+###TVB_N
+```{r}
+glm_location_TVB_N <- glmmTMB(TVB_N ~ location + (1|sample), 
+                           family = Gamma(link = "log"), 
+                           data = quality_comb)
+
+#checking fit
+simulateResiduals(glm_location_TVB_N, plot = TRUE)     #qq good, Gamma makes fit better,
+plotResiduals(glm_location_TVB_N, quality_comb$location, xlab = "location", main=NULL)
+
+hist(simulateResiduals(glm_location_TVB_N))            #good
+testDispersion(simulateResiduals(glm_location_TVB_N))
+
+summary(glm_location_TVB_N) 
+#yes influence of everything
+
+cld((emmeans(glm_location_TVB_N,  ~ location, type = "response")), Letters = letters)
+
+```
+
+###TBA
+```{r}
+glm_TVA <- glmmTMB((TBA) ~ location + (1|sample), 
+                              data = quality_comb,
+                              family = gaussian())
+simulateResiduals(glm_TVA, plot = TRUE)     #good
+hist(simulateResiduals(glm_TVA))            #good
+testDispersion(simulateResiduals(glm_TVA))
+
+summary(glm_TVA) 
+cld((emmeans(glm_TVA,  ~ location, type = "response")), Letters = letters)
+#no difference
+```
+
+###FFA_% 
+```{r}
+glm_FFA <- glmmTMB((`FFA_%`) ~ location + (1|sample), 
+                              data = quality_comb,
+                              family = gaussian(), 
+                              dispformula = ~location)
+
+simulateResiduals(glm_FFA, plot = TRUE)     #levene triggered but visual OK (small sample size)
+hist(simulateResiduals(glm_FFA))            #good
+testDispersion(simulateResiduals(glm_FFA))
+summary(glm_FFA) 
+cld((emmeans(glm_FFA,  ~ location, type = "response")), Letters = letters)
+#no difference 
+```
+
+###TMA_N
+```{r}
+glm_TMA_N <- glmmTMB((TMA_N) ~ location + (1|sample), 
+                              data = quality_comb,
+                              family = gaussian())
+
+simulateResiduals(glm_TMA_N, plot = TRUE)     #
+hist(simulateResiduals(glm_TMA_N))            #good
+testDispersion(simulateResiduals(glm_TMA_N))
+summary(glm_TMA_N) 
+cld((emmeans(glm_TMA_N,  ~ location, type = "response")), Letters = letters)
+#no difference
+```
+
+
+###Cadaverine
+```{r}
+glm_Cadaverine <- glmmTMB(sqrt(Cadaverine) ~ location + (1|sample), 
+                              data = quality_comb,
+                              family = gaussian())
+
+simulateResiduals(glm_Cadaverine, plot = TRUE)     #good
+hist(simulateResiduals(glm_Cadaverine))            #good
+testDispersion(simulateResiduals(glm_Cadaverine))
+summary(glm_Cadaverine) 
+cld((emmeans(glm_Cadaverine,  ~ location, type = "response")), Letters = letters)
+#no difference 
+```
+
+###Histamine
+```{r}
+glm_Histamine <- glmmTMB((Histamine) ~ location + (1|sample), 
+                              data = quality_comb,
+                              family = gaussian())
+
+simulateResiduals(glm_Histamine, plot = TRUE)     #good
+hist(simulateResiduals(glm_Histamine))            #good
+testDispersion(simulateResiduals(glm_Histamine))
+summary(glm_Histamine) 
+cld((emmeans(glm_Histamine,  ~ location, type = "response")), Letters = letters)
+#no difference 
+```
+
+###Putrescine
+```{r}
+glm_Putrescine <- glmmTMB(sqrt(Putrescine) ~ location + (1|sample), 
+                              data = quality_comb,
+                              family = gaussian())
+
+simulateResiduals(glm_Putrescine, plot = TRUE)     #
+hist(simulateResiduals(glm_Putrescine))            #good
+testDispersion(simulateResiduals(glm_Putrescine))
+summary(glm_Putrescine) 
+cld((emmeans(glm_Putrescine,  ~ location, type = "response")), Letters = letters)
+#no difference 
+```
+
+###Vitamin_A
+```{r}
+glm_Vitamin_A <- glmmTMB(log(Vitamin_A) ~ location + (1|sample), 
+                              data = quality_comb,
+                              family = gaussian())
+
+simulateResiduals(glm_Vitamin_A, plot = TRUE)     #good
+hist(simulateResiduals(glm_Vitamin_A))            #good
+testDispersion(simulateResiduals(glm_Vitamin_A))
+summary(glm_Vitamin_A) 
+cld((emmeans(glm_Vitamin_A,  ~ location, type = "response")), Letters = letters)
+# location          response   SE  df asymp.LCL asymp.UCL .group
+#  Ba Ria - Vung Tau     17.0 1.62 Inf      14.1      20.4  a    
+#  Kien Giang            21.3 1.91 Inf      17.8      25.4  a    
+#  Ca Mau                22.5 2.72 Inf      17.8      28.5  a 
+
+Vitamin_A_box <- 
+  quality_comb_mean |> 
+ggplot(aes(location, Vitamin_A)) + 
+  geom_boxplot(aes(fill = location)) +
+  theme_minimal() + 
+  scale_x_discrete(name = "", 
+                   ) + 
+  scale_y_continuous(limits = c(0, 45), 
+                     breaks = seq(0, 45, 5), 
+                     name = "Vitamin A (mg/kg)") + 
+  scale_fill_paletteer_d(palette = "fishualize::Epinephelus_lanceolatus", 
+                           direction = 1, 
+                           name = "Location", 
+                         guide = "none") +
+  theme(axis.line = element_line(colour = "black"), 
+        legend.text = element_text(colour = "black"), 
+        axis.text = element_text(colour = "black"),
+        axis.text.x=element_blank(),
+        panel.grid = element_blank(), 
+        axis.ticks = element_line(colour = "black")) +
+  #geom_signif(comparisons = list(c("Ca Mau", "Kien Giang")), annotations = c("NS"))
+  annotate("text", x = 2, y = 45, label = "NS") + 
+    annotate("segment", x = 1, xend=3, y = 42)
+```
+
+###Vitamin_D3
+```{r}
+glm_Vitamin_D3 <- glmmTMB(log(Vitamin_D3) ~ location + (1|sample), 
+                              data = quality_comb,
+                              family = gaussian(), 
+                          dispformula = ~location)
+
+simulateResiduals(glm_Vitamin_D3, plot = TRUE)     #levene triggered but use dispformula to compensate
+hist(simulateResiduals(glm_Vitamin_D3))            #good
+testDispersion(simulateResiduals(glm_Vitamin_D3))
+summary(glm_Vitamin_D3) 
+cld((emmeans(glm_Vitamin_D3,  ~ location, type = "response")), Letters = letters)
+ # location          response     SE  df asymp.LCL asymp.UCL .group
+ # Ba Ria - Vung Tau    0.773 0.0469 Inf     0.686      0.87  a    
+ # Ca Mau               1.153 0.0884 Inf     0.992      1.34   b   
+ # Kien Giang           1.476 0.0844 Inf     1.320      1.65    c  
+
+Vitamin_D3_box <- 
+  quality_comb_mean |> 
+ggplot(aes(location, Vitamin_D3)) + 
+  geom_boxplot(aes(fill = location)) +
+  theme_minimal() + 
+  scale_x_discrete(name = "", 
+                   ) + 
+  scale_y_continuous(limits = c(0, 2.5), 
+                     breaks = seq(0, 2.5, 0.5), 
+                     name = "Vitamin D3 (mg/kg)") + 
+  scale_fill_paletteer_d(palette = "fishualize::Epinephelus_lanceolatus", 
+                           direction = 1, 
+                           name = "Location", 
+                         guide = "none") +
+  theme(axis.line = element_line(colour = "black"), 
+        legend.text = element_text(colour = "black"), 
+        axis.text = element_text(colour = "black"),
+        axis.text.x=element_blank(),
+        panel.grid = element_blank(), 
+        axis.ticks = element_line(colour = "black")) +
+  # geom_signif(comparisons = list(c("Ca Mau", "Kien Giang")),
+  #             annotations = c("***")) +
+  annotate("text", x = 2, y = 2.45, label = "***") + 
+    annotate("segment", x = 1, xend = 3, y = 2.4, colour = "black")
+```
+
+###Vitamin_E
+```{r}
+glm_Vitamin_E <- glmmTMB(log(Vitamin_E) ~ location + (1|sample), 
+                              data = quality_comb,
+                              family = gaussian())
+
+simulateResiduals(glm_Vitamin_E, plot = TRUE)     #outlier detected
+hist(simulateResiduals(glm_Vitamin_E))            #good
+testDispersion(simulateResiduals(glm_Vitamin_E))
+summary(glm_Vitamin_E) 
+cld((emmeans(glm_Vitamin_E,  ~ location, type = "response")), Letters = letters)
+ # location          response   SE  df asymp.LCL asymp.UCL .group
+ # Kien Giang            11.7 1.77 Inf      8.74      15.8  a    
+ # Ba Ria - Vung Tau     12.6 2.01 Inf      9.22      17.2  a    
+ # Ca Mau                23.5 4.73 Inf     15.79      34.8   b
+
+Vitamin_E_box <- 
+  quality_comb_mean |> 
+ggplot(aes(location, Vitamin_E)) + 
+  geom_boxplot(aes(fill = location)) +
+  theme_minimal() + 
+  scale_x_discrete(name = "Location", 
+                   ) + 
+  scale_y_continuous(limits = c(0, 52), 
+                     breaks = seq(0, 50, 10), 
+                     name = "Vitamin E (mg/kg)") + 
+  scale_fill_paletteer_d(palette = "fishualize::Epinephelus_lanceolatus", 
+                           direction = 1, 
+                           name = "Location") +
+  theme(axis.line = element_line(colour = "black"), 
+        legend.text = element_text(colour = "black"), 
+        axis.text = element_text(colour = "black"),
+        panel.grid = element_blank(), 
+        axis.ticks = element_line(colour = "black"), 
+        legend.position = "none") +
+    annotate("text", x = 1.45, y = 51, label = "**") + 
+    annotate("segment", x = 1, xend = 1.9 , y = 50, colour = "black") + 
+    annotate("text", x = 2.55, y = 51, label = "**") + 
+    annotate("segment", x = 2.1, xend = 3, y = 50, colour = "black")
+
+```
+
+
+###TVC_CFU
+```{r}
+glm_TVC_CFU <- glmmTMB(log10(TVC_CFU) ~ location + (1|sample), 
+                              data = quality_comb,
+                              family = gaussian(), 
+                       dispformula = ~location)
+
+simulateResiduals(glm_TVC_CFU, plot = TRUE)     #
+plotResiduals(glm_TVC_CFU, quality_comb$location, xlab = "location", main=NULL)
+hist(simulateResiduals(glm_TVC_CFU))            #good
+testDispersion(simulateResiduals(glm_TVC_CFU))
+
+cld((emmeans(glm_TVC_CFU,  ~ location, type = "response")), Letters = letters)
+ # location          response       SE  df asymp.LCL asymp.UCL .group
+ # Kien Giang        6.00e+07 3.77e+07 Inf  18907966  2.26e+08  a    
+ # Ba Ria - Vung Tau 9.57e+07 6.73e+07 Inf  26579409  4.24e+08  a    
+ # Ca Mau            3.70e+08 3.80e+08 Inf  59838299  3.46e+09  a    
+ 
+quality_comb_mean |>  
+  ggplot(aes(score, log10(TVC_CFU))) + 
+  geom_point(aes(colour = location), size = 3) + 
+  geom_smooth(method = "lm", 
+              colour = "grey", 
+              alpha = 0.3) +
+  theme_minimal() + 
+  scale_x_continuous(limits = c(1, 10), 
+                     breaks = seq(1, 10, 1),
+                     name = "Sensory score") + 
+  scale_y_continuous(limits = c(6, 11), 
+                     breaks = seq(6, 11, 1), 
+                     name = "TVC (log10(CFU))") + 
+  scale_colour_paletteer_d(palette = "fishualize::Epinephelus_lanceolatus", 
+                           direction = 1, 
+                           name = "Location") +
+  theme(axis.line = element_line(colour = "black"), 
+        legend.text = element_text(colour = "black", size = 12),
+        legend.position = "bottom",
+        axis.text = element_text(colour = "black", size = 12),
+        axis.title = element_text(size = 12),
+        panel.grid.minor = element_blank())
+```
+
+###Enterobacteriaceae_CFU
+```{r}
+glm_EB <- glmmTMB(log10(Enterobacteriaceae_CFU) ~ location + (1|sample), 
+                              data = quality_comb,
+                              family = gaussian(), 
+                  dispformula = ~location)
+
+simulateResiduals(glm_EB, plot = TRUE)     #
+hist(simulateResiduals(glm_EB))            #good
+testDispersion(simulateResiduals(glm_EB))
+cld((emmeans(glm_EB,  ~ location, type = "response")), Letters = letters)
+ # location          response    SE  df asymp.LCL asymp.UCL .group
+ # Kien Giang             930   665 Inf       229      3775  a    
+ # Ba Ria - Vung Tau    21344 16200 Inf      4829     94342   b   
+ # Ca Mau               26516 25400 Inf      4048    173694   b  
+```
+
+###Pseudomonas_CFU
+```{r}
+glm_Psuedo <- glmmTMB(log10(Pseudomonas_CFU) ~ location + (1|sample), 
+                              data = quality_comb,
+                              family = gaussian())
+
+simulateResiduals(glm_Psuedo, plot = TRUE)     #
+hist(simulateResiduals(glm_Psuedo))            #good
+testDispersion(simulateResiduals(glm_Psuedo))
+cld((emmeans(glm_Psuedo,  ~ location, type = "response")), Letters = letters)
+# location          response    SE df lower.CL upper.CL .group
+ # Kien Giang            1145   499 61      479     2736  a    
+ # Ca Mau               26456 15467 61     8219    85158   b   
+ # Ba Ria - Vung Tau    55876 25825 61    22174   140801   b
+```
+
+###Threshholds exceeded
+```{r}
+quality_comb |> 
+  group_by(sample) |>
+  summarise(across(where(is.numeric), ~ mean(.x, na.rm = TRUE))) |>  
+  mutate(TVBN_ex = case_when(TVB_N>35~1, TVB_N<35~0), 
+         Hist_ex = case_when(Histamine>404~1,Histamine<404~0), 
+         TVC_ex = case_when(TVC_CFU>(10^7)~1,TVC_CFU<(10^7)~0)) |> 
+  ungroup() |> 
+  summarise(across(where(is.numeric), ~ sum(.x, na.rm = TRUE))) |> 
+  mutate(TVBN_ex_per = round(TVBN_ex/22*100,0), 
+         Hist_ex_per = round(Hist_ex/22*100,0), 
+         TVC_ex_per = round(TVC_ex/22*100, 0)) |> 
+  dplyr::select(TVBN_ex, TVBN_ex_per, Hist_ex, Hist_ex_per, TVC_ex, TVC_ex_per)
+```
+
+##Combine plots
+```{r}
+ggarrange(TVB_N_plot, TVB_score, nrow = 2, ncol = 1, labels = c("a", "b"))
+
+ggarrange(Vitamin_A_box, Vitamin_D3_box, Vitamin_E_box, nrow = 3, ncol = 1, labels = c("a", "b", "c"))
+```
+
+

@@ -1,0 +1,111 @@
+﻿sample,location,evaluator,Eye_Clarity,Mucous,Odor
+TF1,Ba Ria - Vung Tau,1,9,9,9
+TF2,Ba Ria - Vung Tau,1,6,9,9
+TF3,Ba Ria - Vung Tau,1,6,9,3
+TF4,Ba Ria - Vung Tau,1,5.5,9,1.5
+TF5,Ba Ria - Vung Tau,1,2,8,1
+TF6,Ba Ria - Vung Tau,1,5,8,3
+TF7,Ba Ria - Vung Tau,1,5.5,9,2
+TF8,Ba Ria - Vung Tau,1,6,8,2
+TF9,Kien Giang,1,7.5,9,9
+TF10,Kien Giang,1,5,8.5,3
+TF11,Kien Giang,1,5.5,8.5,3
+TF12,Kien Giang,1,7.5,9,8
+TF13,Kien Giang,1,7.5,9,8
+TF14,Kien Giang,1,5.5,9,3.5
+TF15,Kien Giang,1,6,8,3
+TF16,Kien Giang,1,5.5,9,8
+TF17,Kien Giang,1,7.5,9,8
+TF18,Ca Mau,1,6.5,9,5
+TF19,Ca Mau,1,8,9,4
+TF20,Ca Mau,1,7,10,4.5
+TF21,Ca Mau,1,7.5,9.5,4
+TF22,Ca Mau,1,7,9,4
+TF1,Ba Ria - Vung Tau,2,8.5,9.5,8
+TF2,Ba Ria - Vung Tau,2,5.5,8.5,8
+TF3,Ba Ria - Vung Tau,2,5.5,8.5,3
+TF4,Ba Ria - Vung Tau,2,6,9,1
+TF5,Ba Ria - Vung Tau,2,1,8,1
+TF6,Ba Ria - Vung Tau,2,4,8.5,2
+TF7,Ba Ria - Vung Tau,2,5,8,3
+TF8,Ba Ria - Vung Tau,2,5.5,7.5,3
+TF9,Kien Giang,2,8,9,8
+TF10,Kien Giang,2,4.5,8,3
+TF11,Kien Giang,2,5,9,2.5
+TF12,Kien Giang,2,7,9.5,7.5
+TF13,Kien Giang,2,7.5,9.5,9
+TF14,Kien Giang,2,6,8.5,3
+TF15,Kien Giang,2,5.5,8.5,3.5
+TF16,Kien Giang,2,4.5,9,8
+TF17,Kien Giang,2,6.5,9.5,8.5
+TF18,Ca Mau,2,7,9.5,4
+TF19,Ca Mau,2,7.5,9.5,4.5
+TF20,Ca Mau,2,6.5,9.5,5
+TF21,Ca Mau,2,8,9,5
+TF22,Ca Mau,2,7,9.5,4.5
+TF1,Ba Ria - Vung Tau,3,8,9,8.5
+TF2,Ba Ria - Vung Tau,3,6,8.5,8.5
+TF3,Ba Ria - Vung Tau,3,6,8.5,2.5
+TF4,Ba Ria - Vung Tau,3,5,8.5,1
+TF5,Ba Ria - Vung Tau,3,1.5,8,1
+TF6,Ba Ria - Vung Tau,3,4.5,8,2.5
+TF7,Ba Ria - Vung Tau,3,4,8.5,2.5
+TF8,Ba Ria - Vung Tau,3,5.5,8,2.5
+TF9,Kien Giang,3,7.5,9.5,8.5
+TF10,Kien Giang,3,6,8.5,2.5
+TF11,Kien Giang,3,5.5,8.5,3
+TF12,Kien Giang,3,7,9,8
+TF13,Kien Giang,3,8,9,8.5
+TF14,Kien Giang,3,5.5,9,3.5
+TF15,Kien Giang,3,5,9,3
+TF16,Kien Giang,3,5,8.5,8
+TF17,Kien Giang,3,6,9,8
+TF18,Ca Mau,3,7.5,10,4.5
+TF19,Ca Mau,3,7,9,5
+TF20,Ca Mau,3,5,10,3.5
+TF21,Ca Mau,3,7,8.5,4.5
+TF22,Ca Mau,3,6.5,9,5
+TF1,Ba Ria - Vung Tau,4,9,9,8
+TF2,Ba Ria - Vung Tau,4,6,8,8
+TF3,Ba Ria - Vung Tau,4,5.5,8,3
+TF4,Ba Ria - Vung Tau,4,5.5,8,1
+TF5,Ba Ria - Vung Tau,4,2,8,1
+TF6,Ba Ria - Vung Tau,4,5,8.5,3
+TF7,Ba Ria - Vung Tau,4,4.5,8,3
+TF8,Ba Ria - Vung Tau,4,6,8,3
+TF9,Kien Giang,4,7,9,8
+TF10,Kien Giang,4,5.5,9,2.5
+TF11,Kien Giang,4,6,8,3
+TF12,Kien Giang,4,7.5,9,8
+TF13,Kien Giang,4,6.5,9,8
+TF14,Kien Giang,4,4.5,8.5,2
+TF15,Kien Giang,4,5.5,8.5,3
+TF16,Kien Giang,4,4.5,9,8
+TF17,Kien Giang,4,6,9,8
+TF18,Ca Mau,4,6,9,3
+TF19,Ca Mau,4,6.5,9,4
+TF20,Ca Mau,4,6,9,4
+TF21,Ca Mau,4,6,9,4
+TF22,Ca Mau,4,6,9,4
+TF1,Ba Ria - Vung Tau,5,9,9,8.5
+TF2,Ba Ria - Vung Tau,5,6,8.5,9
+TF3,Ba Ria - Vung Tau,5,5,8.5,2.5
+TF4,Ba Ria - Vung Tau,5,6,9,1
+TF5,Ba Ria - Vung Tau,5,1,8,1
+TF6,Ba Ria - Vung Tau,5,5,8,3
+TF7,Ba Ria - Vung Tau,5,5,8,2
+TF8,Ba Ria - Vung Tau,5,6,8,3
+TF9,Kien Giang,5,7,9,8
+TF10,Kien Giang,5,4.5,8,3
+TF11,Kien Giang,5,4.5,8.5,2.5
+TF12,Kien Giang,5,6,9,8
+TF13,Kien Giang,5,6,9,8
+TF14,Kien Giang,5,5,8,3
+TF15,Kien Giang,5,5,8,3
+TF16,Kien Giang,5,5,8.5,8
+TF17,Kien Giang,5,5.5,9,8
+TF18,Ca Mau,5,7,8,4
+TF19,Ca Mau,5,6,9.5,4
+TF20,Ca Mau,5,5.5,9,3
+TF21,Ca Mau,5,6.5,9,4
+TF22,Ca Mau,5,7,9,4

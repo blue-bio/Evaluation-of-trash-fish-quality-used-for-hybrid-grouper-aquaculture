@@ -1,0 +1,84 @@
+﻿treatment,day,Common name,Type,Family,Genus,Species,Count
+1,0,Trevally,Fish,Carangidae,Atropus,sp,4
+1,0,Black pomfret,Fish,Carangidae,Parastromateus,niger,1
+1,0,Scad,Fish,Carangidae,Alepes,sp,5
+1,0,Big eye scad,Fish,Carangidae,Selar,sp,2
+1,0,Big eye,Fish,Priacanthidae,Priacanthus,sp,1
+1,0,Saddle grunt,Fish,Haemulidae,Pomadasys,maculatus,1
+1,0,Crescent grunter,Fish,Actinopterygii,Terapon,jarbua,1
+1,0,Black-banded trevally,Fish,Carangidae,Seriolina,nigrofasciata,1
+1,0,Little yellow croaker,Fish,Sciaenidae,Larimichthys,polyactis,3
+2,0,Black pomfret,Fish,Carangidae,Parastromateus,niger,1
+2,0,Trevally,Fish,Carangidae,Atropus,sp,1
+2,0,Mackerel,Fish,Scombridae,Rastrelliger,sp,1
+2,0,Little yellow croaker,Fish,Sciaenidae,Larimichthys,polyactis,3
+2,0,Scad,Fish,Carangidae,Alepes,sp,1
+2,0,Big eye scad,Fish,Carangidae,Selar,sp,2
+1,1,Scad,Fish,Carangidae,Alepes,sp,5
+1,1,Black pomfret,Fish,Carangidae,Parastromateus,niger,1
+1,1,Flathead,Fish,Platycephalidae,Platycephalus,sp,1
+1,1,Whiting,Fish,Sillaginidae,Sillago,sp,1
+1,1,Trevally,Fish,Carangidae,Atropus,sp,3
+1,1,Big eye,Fish,Priacanthidae,Priacanthus,sp,3
+1,1,Little yellow croaker,Fish,Sciaenidae,Larimichthys,polyactis,3
+1,1,Black rabbitfish,Fish,Siganidae,Siganus,fuscescens,1
+1,1,Black-banded trevally,Fish,Carangidae,Seriolina,nigrofasciata,2
+1,2,Scad,Fish,Carangidae,Alepes,sp,4
+1,2,Big eye scad,Fish,Carangidae,Selar,sp,2
+1,2,Little yellow croaker,Fish,Sciaenidae,Larimichthys,polyactis,5
+1,2,Trevally,Fish,Carangidae,Atropus,sp,3
+1,2,Big eye,Fish,Priacanthidae,Priacanthus,sp,2
+1,3,Trevally,Fish,Carangidae,Atropus,sp,3
+1,3,Black pomfret,Fish,Carangidae,Parastromateus,niger,1
+1,3,Big eye,Fish,Priacanthidae,Priacanthus,sp,3
+1,3,Scad,Fish,Carangidae,Alepes,sp,4
+1,3,Big eye scad,Fish,Carangidae,Selar,sp,2
+1,3,Little yellow croaker,Fish,Sciaenidae,Larimichthys,polyactis,3
+1,4,Black pomfret,Fish,Carangidae,Parastromateus,niger,3
+1,4,Trevally,Fish,Carangidae,Atropus,sp,3
+1,4,Saddle grunt,Fish,Haemulidae,Pomadasys,maculatus,2
+1,4,Big eye,Fish,Priacanthidae,Priacanthus,sp,3
+1,4,Little yellow croaker,Fish,Sciaenidae,Larimichthys,polyactis,4
+1,4,Big eye scad,Fish,Carangidae,Selar,sp,2
+1,4,Scad,Fish,Carangidae,Alepes,sp,1
+1,4,Dustytail grouper,Fish,Serranidae,Epinephelus,bleekeri,1
+1,4,Lizardfish,Fish,Synodontidae,Saurida,sp,1
+1,5,Mackerel,Fish,Scombridae,Rastrelliger,sp,1
+1,5,Black pomfret,Fish,Carangidae,Parastromateus,niger,1
+1,5,Trevally,Fish,Carangidae,Atropus,sp,3
+1,5,Big eye scad,Fish,Carangidae,Selar,sp,3
+1,5,Scad,Fish,Carangidae,Alepes,sp,3
+1,5,Little yellow croaker,Fish,Sciaenidae,Larimichthys,polyactis,6
+2,1,Little yellow croaker,Fish,Sciaenidae,Larimichthys,polyactis,3
+2,1,Threadfin bream,Fish,Nemipteridae,Nemipterus,sp,1
+2,1,Black-banded trevally,Fish,Carangidae,Seriolina,nigrofasciata,1
+2,1,Trevally,Fish,Carangidae,Atropus,sp,3
+2,1,Scad,Fish,Carangidae,Alepes,sp,3
+2,1,Big eye scad,Fish,Carangidae,Selar,sp,2
+2,1,Black pomfret,Fish,Carangidae,Parastromateus,niger,1
+2,1,Mackerel,Fish,Scombridae,Rastrelliger,sp,2
+2,1,Black rabbitfish,Fish,Siganidae,Siganus,fuscescens,1
+2,2,Trevally,Fish,Carangidae,Atropus,sp,1
+2,2,Little yellow croaker,Fish,Sciaenidae,Larimichthys,polyactis,7
+2,2,Scad,Fish,Carangidae,Alepes,sp,4
+2,2,Big eye scad,Fish,Carangidae,Selar,sp,3
+2,2,Big eye,Fish,Priacanthidae,Priacanthus,sp,1
+2,2,Indian snapper,Fish,Lutjanidae,Lutjanus,madras,1
+2,3,Trevally,Fish,Carangidae,Atropus,sp,3
+2,3,Black pomfret,Fish,Carangidae,Parastromateus,niger,1
+2,3,Scad,Fish,Carangidae,Alepes,sp,4
+2,3,Big eye scad,Fish,Carangidae,Selar,sp,2
+2,3,Little yellow croaker,Fish,Sciaenidae,Larimichthys,polyactis,3
+2,3,Big eye,Fish,Priacanthidae,Priacanthus,sp,3
+2,4,Threadfin bream,Fish,Nemipteridae,Nemipterus,sp,1
+2,4,Black-banded trevally,Fish,Carangidae,Seriolina,nigrofasciata,1
+2,4,Trevally,Fish,Carangidae,Atropus,sp,2
+2,4,Little yellow croaker,Fish,Sciaenidae,Larimichthys,polyactis,4
+2,4,Scad,Fish,Carangidae,Alepes,sp,2
+2,4,Big eye scad,Fish,Carangidae,Selar,sp,4
+2,4,Mackerel,Fish,Scombridae,Rastrelliger,sp,1
+2,5,Trevally,Fish,Carangidae,Atropus,sp,1
+2,5,Little yellow croaker,Fish,Sciaenidae,Larimichthys,polyactis,8
+2,5,Big eye scad,Fish,Carangidae,Selar,sp,3
+2,5,Scad,Fish,Carangidae,Alepes,sp,3
+2,5,Mackerel,Fish,Scombridae,Rastrelliger,sp,2
